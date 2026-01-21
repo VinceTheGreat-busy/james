@@ -1,0 +1,319 @@
+:root {
+  --primary-color: #e74c3c;
+  --secondary-color: #c0392b;
+  --accent-color: #f1948a;
+  --background-color: #fdf2f2;
+  --text-color: #2c2c2c;
+
+  --font-family: "Poppins", sans-serif;
+  --font-size-base: 16px;
+  --spacing-unit: 8px;
+  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ===== Background Image (if needed) ===== */
+img.bg-img {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.1; /* softer */
+  z-index: -1;
+}
+
+/* ===== Layout ===== */
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--background-color);
+}
+
+/* ===== Sidebar ===== */
+aside {
+  width: 240px;
+  background: linear-gradient(180deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.15);
+  transition: width 0.3s ease;
+}
+
+aside nav {
+  padding: calc(var(--spacing-unit) * 3) calc(var(--spacing-unit) * 2);
+}
+
+aside h1 {
+  margin-bottom: 1.5rem;
+  font-size: 1.4rem;
+  text-align: center;
+}
+
+aside ul {
+  list-style: none;
+}
+
+aside ul li + li {
+  margin-top: 0.5rem;
+}
+
+aside a {
+  display: block;
+  padding: 12px 16px;
+  color: white;
+  text-decoration: none;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  transition: background-color 0.25s ease, transform 0.2s ease, color 0.25s ease;
+}
+
+aside a:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  transform: translateX(4px);
+}
+
+aside a.active {
+  background-color: var(--accent-color);
+  color: var(--secondary-color);
+  font-weight: 600;
+}
+
+/* ===== Main Wrapper ===== */
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Header ===== */
+header {
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  padding: calc(var(--spacing-unit) * 3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--box-shadow);
+  transition: padding 0.3s ease;
+}
+
+header h1 {
+  font-size: 1.6rem;
+}
+
+header h1 span {
+  font-weight: 200;
+  text-transform: capitalize;
+}
+
+header button {
+  font-size: 1.5rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background-color: white;
+  color: var(--primary-color);
+  font-weight: bold;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+header button:hover {
+  transform: scale(1.1);
+  background-color: var(--accent-color);
+  color: var(--secondary-color);
+}
+
+/* ===== Main Content ===== */
+main {
+  flex: 1;
+  padding: calc(var(--spacing-unit) * 4);
+  background-color: #f5f5f5;
+  overflow-x: auto;
+  transition: padding 0.3s ease;
+}
+
+/* ===== Cards ===== */
+#box-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.box-card,
+.dmgItems,
+.availItems,
+.undpairItems {
+  background: white;
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  min-width: 200px;
+  box-shadow: var(--box-shadow);
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.box-card:hover,
+.dmgItems:hover,
+.availItems:hover,
+.undpairItems:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+}
+
+/* ===== Sort ===== */
+#inventory-list form {
+  margin-bottom: 1rem;
+}
+
+#sort {
+  padding: 10px;
+  border-radius: var(--border-radius);
+  border: 1px solid #ccc;
+  transition: border-color 0.2s ease;
+}
+
+#sort:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* ===== Table ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--box-shadow);
+}
+
+thead {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+th,
+td {
+  padding: 12px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+tbody tr:hover {
+  background-color: #eee;
+  transition: background-color 0.2s ease;
+}
+
+/* ===== Buttons ===== */
+.edit-btn,
+.delete-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.edit-btn:hover,
+.delete-btn:hover {
+  transform: scale(1.05);
+}
+
+.edit-btn {
+  background-color: var(--accent-color);
+  color: var(--secondary-color);
+}
+
+.delete-btn {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+/* ===== Modal ===== */
+#addItemModal,
+#editItemModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#addItemModal.active,
+#editItemModal.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: var(--border-radius);
+  width: 90%;
+  max-width: 700px;
+  transition: transform 0.3s ease;
+}
+
+.modal-content.show {
+  transform: translateY(0);
+}
+
+.close {
+  float: right;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.close:hover {
+  color: var(--primary-color);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  aside {
+    width: 100%;
+  }
+
+  header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  #box-cards {
+    justify-content: center;
+  }
+}
