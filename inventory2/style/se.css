@@ -203,25 +203,82 @@ main {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 2rem;
-}
-
-.line-graph,
-.calendar {
-  min-height: 350px; /* optional, ensures container doesn't collapse */
-  background: white;
-  padding: 1.5rem;
-  border-radius: var(--border-radius);
-  flex: 1 1 400px;
-  box-shadow: var(--box-shadow);
-  width: 100%;
-  display: block; /* remove height:100% here */
+  margin-top: 2rem;
 }
 
 .line-graph canvas {
-  width: 100% !important;
-  height: 100% !important;
-  display: block;
+  flex: 1;
+}
+
+/* Calendar Styles */
+.calendar-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-family);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: calc(var(--spacing-unit) * 1);
+}
+
+.calendar-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.calendar-header button {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.calendar-header button:hover {
+  background: var(--secondary-color);
+}
+
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.calendar-table th {
+  background: var(--primary-color);
+  color: #fff;
+  padding: 6px;
+  font-size: 0.85rem;
+  border-radius: 4px 4px 0 0;
+}
+
+.calendar-table td {
+  padding: 8px 6px;
+  font-size: 0.85rem;
+  transition: background 0.3s, color 0.3s;
+}
+
+.calendar-table td:hover {
+  background: var(--accent-color);
+  color: #fff;
+  cursor: default;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  #essentials {
+    flex-direction: column;
+  }
+  .box-card {
+    flex: 1 1 100%;
+  }
 }
 
 /* ===== History Section ===== */
@@ -231,6 +288,8 @@ main {
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
   margin-bottom: 2rem;
+  max-height: 180px;
+  overflow: scroll;
 }
 
 .history h3 {

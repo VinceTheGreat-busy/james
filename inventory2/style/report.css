@@ -1,0 +1,254 @@
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+th,
+td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+th {
+  background-color: #f4f4f4;
+  font-weight: bold;
+}
+tr:hover {
+  background-color: #f9f9f9;
+}
+.report-section {
+  margin: 30px 0;
+}
+.print-btn {
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.print-btn:hover {
+  background: #0056b3;
+}
+
+.add-room-btn {
+  padding: 10px 20px;
+  background: #28a745;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-left: 10px;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  background: #ffffff;
+  width: 100%;
+  max-width: 360px;
+  padding: 24px 22px;
+  border-radius: 12px;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08);
+
+  animation: scaleIn 0.25s ease-out;
+}
+
+/* Header text */
+.modal-content h3 {
+  margin-bottom: 14px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* Form fields */
+.modal-content label {
+  display: block;
+  margin-top: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #444;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 9px 10px;
+  margin-top: 5px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.9rem;
+}
+
+.modal-content input:focus {
+  border-color: #5b6cff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(91, 108, 255, 0.15);
+}
+
+/* Actions */
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-actions button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+}
+
+.modal-actions button[type="submit"] {
+  background: #5b6cff;
+  color: #fff;
+}
+
+.modal-actions button[type="submit"]:hover {
+  background: #4a5bf5;
+}
+
+.modal-actions button[type="button"] {
+  background: #f1f1f1;
+}
+
+.modal-actions button[type="button"]:hover {
+  background: #e3e3e3;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---------- NORMAL UI ---------- */
+.print-btn,
+.add-room-btn {
+  margin-bottom: 15px;
+}
+
+.report-section {
+  margin-bottom: 30px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 8px;
+  border: 1px solid #ccc;
+}
+
+/* ---------- PRINT CONTROL ---------- */
+.print-only {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #print-area,
+  #print-area * {
+    visibility: visible;
+  }
+
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .print-only {
+    display: block;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th,
+  td {
+    border: 1px solid #000;
+  }
+}
+
+.add-room-btn:hover {
+  background: #1e7e34;
+}
+.print-only {
+  display: none;
+}
+
+@media print {
+  .print-only {
+    display: block;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+}
+
+.modal-actions button[type="submit"] {
+  padding: 8px 16px;
+  border: none;
+  background-color: #28a745;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.modal-actions button[type="submit"]:hover {
+  background-color: #218838;
+}
+
+.modal-actions button[type="button"] {
+  padding: 8px 16px;
+  border: none;
+  background-color: #6c757d;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.modal-actions button[type="button"]:hover {
+  background-color: #5a6268;
+}

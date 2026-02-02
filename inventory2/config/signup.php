@@ -79,19 +79,23 @@ $csrf_token = generateCSRFToken();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up - SHJCS Inventory</title>
-    <link rel="stylesheet" href="../style/login.css">
+    <link rel="stylesheet" href="../style/auth.css">
 </head>
 
 <body>
-    <div class="login-container">
-        <div class="login-box">
+    <div class="signup-container">
+        <div class="signup-box">
             <h2>Create Account</h2>
 
-            <?php foreach ($errors as $error): ?>
-                <div class="error"><?= htmlspecialchars($error); ?></div>
-            <?php endforeach; ?>
+            <!-- Error messages -->
+            <?php if (!empty($errors)): ?>
+                <?php foreach ($errors as $error): ?>
+                    <div class="alert error"><?= htmlspecialchars($error); ?></div>
+                <?php endforeach; ?>
+            <?php endif; ?>
 
-            <form method="POST" action="signup.php">
+            <!-- Signup Form -->
+            <form class="signup-form" method="POST" action="signup.php">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
 
                 <input type="text" name="username" placeholder="Username" required autocomplete="username">
@@ -103,7 +107,7 @@ $csrf_token = generateCSRFToken();
                 <button type="submit">Sign Up</button>
             </form>
 
-
+            <!-- Footer Link -->
             <div class="auth-link">
                 <p>Already have an account? <a href="login.php">Login here</a></p>
             </div>

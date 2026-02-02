@@ -60,7 +60,7 @@ $csrf_token = generateCSRFToken();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - SHJCS Inventory</title>
-    <link rel="stylesheet" href="../style/login.css">
+    <link rel="stylesheet" href="../style/auth.css">
 </head>
 
 <body>
@@ -76,7 +76,7 @@ $csrf_token = generateCSRFToken();
                 <div class="error"><?= htmlspecialchars($error); ?></div>
             <?php endforeach; ?>
 
-            <form method="POST" action="login.php">
+            <form class="login-form" method="POST" action="login.php">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
 
                 <input type="text" name="identifier" placeholder="Username or Email" required autocomplete="username">
