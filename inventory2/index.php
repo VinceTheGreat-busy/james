@@ -1,13 +1,13 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
 require_once 'config/db.php';
 require_once 'config/auth.php';
 require_once 'config/counter.php';
 
-// Require authentication
-requireLogin();
-
 // Set security headers
-setSecurityHeaders();
+requireLogin();
 
 // Get current user
 $currentUser = getCurrentUser();
@@ -31,14 +31,21 @@ $daysInMonth = date('t', strtotime("$year-$month-01"));
 
     <!-- Stylesheets -->
     <link rel="stylesheet" href="style/se.css">
+    <link rel="stylesheet" href="style/universal.css">
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
 <body>
     <div class="layout">
+        <!-- Mobile Menu Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
         <!-- Sidebar -->
-        <aside>
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-close" id="sidebarClose">
+                <i class="fas fa-times"></i>
+            </div>
             <nav>
                 <div class="logo">
                     <h1><i class="fas fa-boxes"></i> SHJCS</h1>
@@ -57,7 +64,12 @@ $daysInMonth = date('t', strtotime("$year-$month-01"));
         <div class="main-wrapper">
             <!-- Header -->
             <header>
-                <h1>SHJCS <span>Inventory Management System</span></h1>
+                <div class="header-left">
+                    <button class="menu-toggle" id="menuToggle" aria-label="Toggle Menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1>SHJCS <span>Inventory Management System</span></h1>
+                </div>
                 <div class="header-actions">
                     <span class="current-time" id="currentTime"></span>
                 </div>
@@ -129,21 +141,23 @@ $daysInMonth = date('t', strtotime("$year-$month-01"));
                 </div>
 
                 <!-- Analytics Section -->
-                <section id="essentials" style="display:flex; gap:1rem; flex-wrap:wrap; margin-top: 2rem;">
+                <section id="essentials">
                     <!-- Line Graph -->
-                    <div class="line-graph box-card" style="flex:1 1 400px; height:350px;">
+                    <div class="line-graph box-card">
                         <h3><i class="fas fa-chart-line"></i> Item Addition History</h3>
-                        <canvas id="lineChart" style="width:100%; height:300px;"></canvas>
+                        <div class="chart-container">
+                            <canvas id="lineChart"></canvas>
+                        </div>
                     </div>
 
                     <!-- Calendar -->
-                    <div class="calendar box-card" style="flex:1 1 400px;">
+                    <div class="calendar box-card">
                         <h3><i class="fas fa-calendar-alt"></i> Calendar</h3>
                         <div class="calendar-container">
                             <div class="calendar-header">
-                                <button id="prevMonth">&laquo; Previous</button>
+                                <button id="prevMonth" aria-label="Previous Month">&laquo; Previous</button>
                                 <h3 id="calendarTitle"></h3>
-                                <button id="nextMonth">Next &raquo;</button>
+                                <button id="nextMonth" aria-label="Next Month">Next &raquo;</button>
                             </div>
 
                             <table class="calendar-table">
@@ -165,7 +179,7 @@ $daysInMonth = date('t', strtotime("$year-$month-01"));
                 </section>
 
                 <!-- Recent Activity -->
-                <section id="hero" style="margin-top: 2rem;">
+                <section id="hero">
                     <div class="history box-card">
                         <h3><i class="fas fa-history"></i> Recent Activity</h3>
                         <div class="activity-list">
@@ -216,6 +230,36 @@ $daysInMonth = date('t', strtotime("$year-$month-01"));
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
     <script>
+        // Mobile Menu Toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebarClose = document.getElementById('sidebarClose');
+
+        function openSidebar() {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        menuToggle.addEventListener('click', openSidebar);
+        sidebarOverlay.addEventListener('click', closeSidebar);
+        sidebarClose.addEventListener('click', closeSidebar);
+
+        // Close sidebar when clicking on a link (mobile)
+        if (window.innerWidth <= 768) {
+            const sidebarLinks = sidebar.querySelectorAll('a');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', closeSidebar);
+            });
+        }
+
         // Update current time
         function updateTime() {
             const now = new Date();
@@ -243,8 +287,8 @@ $daysInMonth = date('t', strtotime("$year-$month-01"));
                 datasets: [{
                     label: 'Items Added',
                     data: itemsPerMonth,
-                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
-                    borderColor: 'rgba(52, 152, 219, 1)',
+                    backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                    borderColor: 'rgba(231, 76, 60, 1)',
                     borderWidth: 3,
                     tension: 0.4,
                     fill: true,

@@ -57,7 +57,9 @@
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .item-card:hover {
@@ -207,4 +209,217 @@
 
 .assignItem-btn:hover {
   background: #218838;
+}
+
+/* ── Toast ────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.92rem;
+  max-width: 340px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transform: translateY(120%);
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.toast.success {
+  background: #16a34a;
+}
+
+.toast.error {
+  background: #dc2626;
+}
+
+.toast .toast-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* ── Assign-Item Modal tweaks ─────────────────── */
+.search-wrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.search-wrap .fa-search {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  pointer-events: none;
+}
+
+.search-wrap input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px 9px 34px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.93rem;
+}
+
+.search-wrap input:focus {
+  outline: none;
+  border-color: #4a7cf7;
+  box-shadow: 0 0 0 3px rgba(74, 124, 247, 0.2);
+}
+
+.search-results {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.search-results:empty::after {
+  content: attr(data-empty);
+  display: block;
+  padding: 32px 16px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.88rem;
+}
+
+.result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.result-row:last-child {
+  border-bottom: none;
+}
+
+.result-row:hover {
+  background: #f0f4ff;
+}
+
+.result-row .r-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.result-row .r-meta {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.result-row .r-qty {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #16a34a;
+  white-space: nowrap;
+}
+
+/* ── Quantity picker (shown after row selected) ─ */
+.qty-picker {
+  display: none;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.qty-picker.visible {
+  display: block;
+}
+
+.qty-picker .selected-name {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.qty-picker .qty-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.qty-picker input {
+  width: 80px;
+  padding: 7px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.93rem;
+}
+
+.qty-picker input:focus {
+  outline: none;
+  border-color: #4a7cf7;
+  box-shadow: 0 0 0 3px rgba(74, 124, 247, 0.2);
+}
+
+/* ── Item grid card polish ───────────────────── */
+.item-card {
+  position: relative;
+}
+
+.card-badge {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.card-badge.Available {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.card-badge.Damaged {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.card-badge.For\ Replacement {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* ── Print ────────────────────────────────────── */
+@media print {
+  .no-print,
+  aside,
+  .sidebar-toggle {
+    display: none !important;
+  }
+
+  .layout {
+    flex-direction: column;
+  }
+
+  .item-card {
+    break-inside: avoid;
+  }
+
+  .toast {
+    display: none !important;
+  }
 }

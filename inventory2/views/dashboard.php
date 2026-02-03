@@ -13,10 +13,14 @@ $currentUser = getCurrentUser();
 
 // Floor Selection Handler
 if (isset($_GET['floor'])) {
-    $floorNumber = sanitizeId($_GET['floor']);
-    if ($floorNumber) {
+    $floorNumber = sanitizeInput($_GET['floor']);
+
+    if ($floorNumber === '') {
+        unset($_SESSION['user']['floor']);
+    } else {
         $_SESSION['user']['floor'] = $floorNumber;
     }
+
     header("Location: dashboard.php");
     exit;
 }
@@ -25,11 +29,17 @@ $floorNumber = $_SESSION['user']['floor'] ?? null;
 $floorData = null;
 
 if ($floorNumber) {
-    $floorData = fetchOne($conn, "SELECT id, numbers FROM floors WHERE numbers = ?", [$floorNumber], 'i');
+    $floorData = fetchOne($conn, "SELECT id, floor_number FROM floors WHERE floor_number = ?", [$floorNumber], 's');
 }
 
 // Get all floors for filter
-$floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
+$floors = fetchAll($conn, "SELECT * FROM floors");
+
+// ---------------------------------------------------------------------------
+// Pre-load ALL items (quantity > 0) so search.js can filter client-side.
+// Sorted A-Z here; the JS never has to sort.
+// ---------------------------------------------------------------------------
+$allItems = fetchAll($conn, "SELECT id, name, quantity, conditions, type, description FROM items WHERE quantity > 0 ORDER BY name ASC");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,15 +48,21 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - SHJCS Inventory</title>
-    <link rel="stylesheet" href="../style/university.css">
-    <link rel="stylesheet" href="../style/dash.css">
+    <link rel="stylesheet" href="../style/universal.css">
+    <link rel="stylesheet" href="../style/dashboards.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
 <body>
     <div class="layout">
+        <!-- Mobile Menu Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
         <!-- Sidebar -->
-        <aside>
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-close" id="sidebarClose">
+                <i class="fas fa-times"></i>
+            </div>
             <nav>
                 <div class="logo">
                     <h1><i class="fas fa-boxes"></i> SHJCS</h1>
@@ -64,28 +80,29 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
         <div class="main-wrapper">
             <!-- Header -->
             <header>
-                <button id="toggleSidebar" class="sidebar-toggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <h1>
-                    <i class="fas fa-th-large"></i>
-                    Inventory Dashboard
-                </h1>
+                <div class="header-left">
+                    <button class="menu-toggle" id="menuToggle" aria-label="Toggle Menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1><i class="fas fa-th-large"></i> Inventory Dashboard</h1>
+                </div>
 
                 <!-- Floor Filter -->
                 <div class="floor-filter">
-                    <label for="floorSelect"><i class="fas fa-building"></i> Floor:</label>
+                    <label for="floorSelect"><i class="fas fa-building"></i> <span
+                            class="filter-label">Floor:</span></label>
                     <select id="floorSelect" onchange="changeFloor(this.value)">
                         <option value="">All Floors</option>
                         <?php foreach ($floors as $floor): ?>
-                            <option value="<?= $floor['numbers']; ?>" <?= ($floorNumber == $floor['numbers']) ? 'selected' : ''; ?>>
-                                Floor <?= $floor['numbers']; ?>
+                            <option value="<?= $floor['floor_number']; ?>" <?= ($floorNumber == $floor['floor_number']) ? 'selected' : ''; ?>>
+                                Floor <?= $floor['floor_number']; ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
             </header>
 
+            <!-- Add Item Modal -->
             <div class="addItemModal" id="itemModal" style="display: none;">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -104,7 +121,7 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
 
                                 <label for="condition">Condition:</label>
                                 <select id="condition" name="condition" required>
-                                    <option value="Select">Select condition</option>
+                                    <option value="">Select condition</option>
                                     <option value="Available">Available</option>
                                     <option value="Damaged">Damaged</option>
                                     <option value="For Replacement">For Replacement</option>
@@ -126,6 +143,7 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
                 </div>
             </div>
 
+            <!-- Edit Item Modal -->
             <div class="modal" id="editItemModal" style="display: none;">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -146,7 +164,7 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
 
                                 <label for="editCondition">Condition:</label>
                                 <select id="editCondition" name="condition" required>
-                                    <option value="Select">Select condition</option>
+                                    <option value="">Select condition</option>
                                     <option value="Available">Available</option>
                                     <option value="Damaged">Damaged</option>
                                     <option value="For Replacement">For Replacement</option>
@@ -192,7 +210,7 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
                             <?php endif; ?>
                         </div>
                         <div>
-                            <button id="addItem"><i class="fa-solid fa-plus"></i>Add Item</button>
+                            <button id="addItem"><i class="fa-solid fa-plus"></i> Add Item</button>
                         </div>
                     </div>
 
@@ -202,10 +220,7 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
                     </div>
 
                     <div id="itemCards" class="cards-wrapper">
-                        <div class="empty-state">
-                            <i class="fas fa-search"></i>
-                            <p>Type to search for items...</p>
-                        </div>
+                        <!-- search.js populates this on load -->
                     </div>
                 </div>
 
@@ -244,8 +259,10 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
                 <!-- ROOMS SECTION -->
                 <div class="listofRooms">
                     <div class="section-header">
-                        <h2><i class="fas fa-door-open"></i> Rooms</h2>
-                        <p><?= $floorData ? "Floor {$floorData['numbers']}" : 'All Floors'; ?></p>
+                        <div>
+                            <h2><i class="fas fa-door-open"></i> Rooms</h2>
+                            <p><?= $floorData ? "Floor {$floorData['floor_number']}" : 'All Floors'; ?></p>
+                        </div>
                     </div>
 
                     <div class="rooms-grid">
@@ -269,7 +286,9 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
                                 <div class="roomCard" data-room-id="<?= $room['id']; ?>">
                                     <div class="room-info">
                                         <h3><?= htmlspecialchars($room['rn']); ?></h3>
-                                        <p class="room-name"><?= htmlspecialchars($room['name']); ?></p>
+                                        <p class="room-name"><?= htmlspecialchars($room['name']); ?> -
+                                            <?= htmlspecialchars($room['teacher'] ?: 'N/A'); ?>
+                                        </p>
                                         <span class="item-badge">
                                             <i class="fas fa-box"></i> <?= $itemCount['count'] ?? 0; ?> items
                                         </span>
@@ -296,6 +315,43 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
         </div>
     </div>
 
+    <!-- ---------------------------------------------------------------
+         Item data for client-side search.
+         Each value is individually escaped for safe embedding inside a
+         JS string.  No JSON encoder is used – every field is output as
+         a plain JS string / number literal.
+         --------------------------------------------------------------- -->
+    <script>
+        window.__ITEMS__ = [
+            <?php
+            // Escape helper – defined once, reused for every row
+            $esc = function (string $v): string {
+                return str_replace(
+                    ["\r\n", "\r", "\n"],
+                    ' ',
+                    addslashes($v)
+                );
+            };
+
+            $first = true;
+            foreach ($allItems as $row) {
+                if (!$first)
+                    echo ",\n";
+                $first = false;
+
+                echo "{"
+                    . "'id':" . (int) $row['id'] . ","
+                    . "'name':'" . $esc($row['name']) . "',"
+                    . "'quantity':" . (int) $row['quantity'] . ","
+                    . "'condition':'" . $esc($row['conditions'] ?? '') . "',"
+                    . "'type':'" . $esc($row['type'] ?? '') . "',"
+                    . "'description':'" . $esc($row['description'] ?? '') . "'"
+                    . "}";
+            }
+            ?>
+        ];
+    </script>
+
     <!-- Scripts -->
     <script src="../js/side.js"></script>
     <script src="../js/search.js"></script>
@@ -303,11 +359,41 @@ $floors = fetchAll($conn, "SELECT * FROM floors ORDER BY numbers ASC");
     <script src="../js/modal.js"></script>
 
     <script>
+        // Mobile Menu Toggle
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebarClose = document.getElementById('sidebarClose');
+
+        function openSidebar() {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        menuToggle.addEventListener('click', openSidebar);
+        sidebarOverlay.addEventListener('click', closeSidebar);
+        sidebarClose.addEventListener('click', closeSidebar);
+
+        // Close sidebar when clicking on a link (mobile)
+        if (window.innerWidth <= 768) {
+            const sidebarLinks = sidebar.querySelectorAll('a');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', closeSidebar);
+            });
+        }
+
         function changeFloor(floorNumber) {
-            if (floorNumber) {
-                window.location.href = 'dashboard.php?floor=' + floorNumber;
-            } else {
+            if (floorNumber === "") {
                 window.location.href = 'dashboard.php';
+            } else {
+                window.location.href = 'dashboard.php?floor=' + encodeURIComponent(floorNumber);
             }
         }
     </script>

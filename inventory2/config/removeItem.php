@@ -4,82 +4,85 @@ require_once 'auth.php';
 
 header('Content-Type: text/plain');
 
-// Check authentication
 if (!isLoggedIn()) {
     http_response_code(401);
     exit('Unauthorized: Please log in');
 }
 
-// Validate request method
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     exit('Method not allowed');
 }
 
-// Get and validate input
 $itemId = sanitizeId($_POST['item_id'] ?? null);
 $roomId = sanitizeId($_POST['room_id'] ?? null);
-$userId = $_SESSION['user']['id'];
+$userId = getCurrentUserId();
 
 if (!$itemId || !$roomId) {
     http_response_code(400);
-    exit('Invalid input: Missing required fields');
+    exit('Invalid input: item_id and room_id are required');
 }
 
-// Start transaction
 $conn->begin_transaction();
 
 try {
-    // Get the current assigned quantity
-    $stmt = $conn->prepare("
-        SELECT quantity 
-        FROM room_items 
-        WHERE room_id = ? AND item_id = ?
-    ");
-    $stmt->bind_param("ii", $roomId, $itemId);
+    // Lock the row and grab assigned qty + item name
+    $stmt = $conn->prepare(
+        "SELECT ri.quantity AS assigned_qty, i.name
+         FROM room_items ri
+         JOIN  items i ON ri.item_id = i.id
+         WHERE ri.room_id = ? AND ri.item_id = ?
+         FOR UPDATE"
+    );
+    $stmt->bind_param('ii', $roomId, $itemId);
     $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows === 0) {
-        throw new Exception('Item not found in this room');
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$row) {
+        throw new Exception('Item is not assigned to this room');
     }
-    
-    $assignedQty = $result->fetch_assoc()['quantity'];
-    $stmt->close();
 
-    // Delete the room_items entry
-    $stmt = $conn->prepare("
-        DELETE FROM room_items 
-        WHERE room_id = ? AND item_id = ?
-    ");
-    $stmt->bind_param("ii", $roomId, $itemId);
+    $assignedQty = (int) $row['assigned_qty'];
+    $itemName = $row['name'];
+
+    // Delete the room_items row
+    $stmt = $conn->prepare("DELETE FROM room_items WHERE room_id = ? AND item_id = ?");
+    $stmt->bind_param('ii', $roomId, $itemId);
     $stmt->execute();
     $stmt->close();
 
-    // Return the quantity back to global inventory
-    $stmt = $conn->prepare("
-        UPDATE items 
-        SET quantity = quantity + ? 
-        WHERE id = ?
-    ");
-    $stmt->bind_param("ii", $assignedQty, $itemId);
+    // Return stock to global inventory
+    $stmt = $conn->prepare("UPDATE items SET quantity = quantity + ? WHERE id = ?");
+    $stmt->bind_param('ii', $assignedQty, $itemId);
     $stmt->execute();
     $stmt->close();
 
-    // Log the action
-    logAction($conn, $userId, "Removed {$assignedQty} items from room", $itemId, $roomId);
+    // Grab room number for the log
+    $stmt = $conn->prepare("SELECT rn FROM rooms WHERE id = ?");
+    $stmt->bind_param('i', $roomId);
+    $stmt->execute();
+    $roomRow = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
 
-    // Commit transaction
+    logAction(
+        $conn,
+        $userId,
+        "Removed {$assignedQty} unit(s) of '{$itemName}' from room '{$roomRow['rn']}'",
+        $itemId,
+        $roomId
+    );
+
     $conn->commit();
-    
+
     http_response_code(200);
-    echo 'Success: Item removed from room and returned to inventory';
+    echo "Success: '{$itemName}' removed from room '{$roomRow['rn']}' ({$assignedQty} unit(s) returned to stock)";
 
 } catch (Exception $e) {
-    // Rollback on error
     $conn->rollback();
-    
     error_log("removeItem.php error: " . $e->getMessage());
     http_response_code(400);
     echo 'Error: ' . $e->getMessage();
 }
+
+$conn->close();

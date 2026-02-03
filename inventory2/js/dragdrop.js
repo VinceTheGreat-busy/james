@@ -1,227 +1,274 @@
 /**
- * Drag and Drop Functionality for Item Assignment
+ * Drag-and-Drop & Assignment – plain XHR, no JSON
  * SHJCS Inventory System
+ *
+ * 1. Makes every .itemCard draggable.  (window.attachDragListeners is called
+ *    by search.js after every render so freshly-created cards are included.)
+ * 2. Makes every .roomCard a drop target.
+ * 3. On drop   → opens the quantity modal.
+ * 4. On submit → POSTs to assignItem.php, reads the plain-text response,
+ *    shows a toast, invalidates the search cache, and reloads.
  */
 
 (function () {
     'use strict';
 
-    // Modal elements
-    const quantityModal = document.getElementById('quantityModal');
-    const modalClose = document.getElementById('modalClose');
-    const modalSubmit = document.getElementById('modalSubmit');
-    const modalItemName = document.getElementById('modalItemName');
-    const modalItemQty = document.getElementById('modalItemQty');
-    const modalAssignQty = document.getElementById('modalAssignQty');
+    /* ----------------------------------------------------------
+     * DOM – modal
+     * ---------------------------------------------------------- */
+    var quantityModal = document.getElementById('quantityModal');
+    var modalClose = document.getElementById('modalClose');
+    var modalSubmit = document.getElementById('modalSubmit');
+    var modalItemName = document.getElementById('modalItemName');
+    var modalItemQty = document.getElementById('modalItemQty');
+    var modalAssignQty = document.getElementById('modalAssignQty');
 
-    // Store current drag data
-    let draggedItem = null;
-    let targetRoom = null;
+    /* ----------------------------------------------------------
+     * Transient state
+     * ---------------------------------------------------------- */
+    var draggedItem = null;   // { id, name, quantity }
+    var targetRoom = null;   // { id, name }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Drag Event Handlers
-    |--------------------------------------------------------------------------
-    */
+    /* ==============================================================
+     * DRAG  (source – item cards)
+     * ============================================================== */
 
     /**
-     * Attach drag listeners to all item cards
+     * Wire dragstart/dragend on every .itemCard currently in the DOM.
+     * Exported on window so search.js can re-wire after rendering.
      */
     function attachDragListeners() {
-        const itemCards = document.querySelectorAll('.itemCard');
-
-        itemCards.forEach(card => {
-            // Drag start
-            card.addEventListener('dragstart', function (e) {
-                draggedItem = {
-                    id: this.dataset.itemId,
-                    name: this.dataset.itemName,
-                    quantity: parseInt(this.dataset.itemQty)
-                };
-
-                this.classList.add('dragging');
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/html', this.innerHTML);
-            });
-
-            // Drag end
-            card.addEventListener('dragend', function (e) {
-                this.classList.remove('dragging');
-            });
-        });
+        var cards = document.querySelectorAll('.itemCard');
+        for (var i = 0; i < cards.length; i++) {
+            cards[i].ondragstart = onDragStart;
+            cards[i].ondragend = onDragEnd;
+        }
     }
 
+    function onDragStart(e) {
+        var card = e.currentTarget;
+
+        draggedItem = {
+            id: card.dataset.itemId,
+            name: card.dataset.itemName,
+            quantity: parseInt(card.dataset.itemQty, 10)
+        };
+
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', card.dataset.itemId);
+    }
+
+    function onDragEnd(e) {
+        e.currentTarget.classList.remove('dragging');
+    }
+
+    /* ==============================================================
+     * DROP  (target – room cards)
+     * ============================================================== */
+
     /**
-     * Attach drop listeners to all room cards
+     * Wire all four drag-target events on every .roomCard.
+     * Room cards are server-rendered and don't change, so this only
+     * needs to run once.
      */
     function attachDropListeners() {
-        const roomCards = document.querySelectorAll('.roomCard');
-
-        roomCards.forEach(card => {
-            // Drag over
-            card.addEventListener('dragover', function (e) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                this.classList.add('drag-over');
-            });
-
-            // Drag enter
-            card.addEventListener('dragenter', function (e) {
-                e.preventDefault();
-                this.classList.add('drag-over');
-            });
-
-            // Drag leave
-            card.addEventListener('dragleave', function (e) {
-                this.classList.remove('drag-over');
-            });
-
-            // Drop
-            card.addEventListener('drop', function (e) {
-                e.preventDefault();
-                this.classList.remove('drag-over');
-
-                if (draggedItem) {
-                    targetRoom = {
-                        id: this.dataset.roomId,
-                        name: this.querySelector('h3').textContent
-                    };
-
-                    openQuantityModal();
-                }
-            });
-        });
+        var rooms = document.querySelectorAll('.roomCard');
+        for (var i = 0; i < rooms.length; i++) {
+            rooms[i].ondragover = onDragOver;
+            rooms[i].ondragenter = onDragEnter;
+            rooms[i].ondragleave = onDragLeave;
+            rooms[i].ondrop = onDrop;
+        }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Modal Functions
-    |--------------------------------------------------------------------------
-    */
+    function onDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
 
-    /**
-     * Open quantity selection modal
-     */
-    function openQuantityModal() {
-        if (!draggedItem || !targetRoom) {
-            return;
+    function onDragEnter(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+    }
+
+    function onDragLeave(e) {
+        // Ignore leave events that fire when moving into a child node
+        if (!this.contains(e.relatedTarget)) {
+            this.classList.remove('drag-over');
         }
+    }
 
-        // Populate modal
+    function onDrop(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+
+        if (!draggedItem) return;
+
+        targetRoom = {
+            id: this.dataset.roomId,
+            name: (this.querySelector('h3') || {}).textContent || ''
+        };
+
+        openQuantityModal();
+    }
+
+    /* ==============================================================
+     * MODAL
+     * ============================================================== */
+
+    function openQuantityModal() {
+        if (!draggedItem || !targetRoom || !quantityModal) return;
+
         modalItemName.textContent = draggedItem.name;
         modalItemQty.textContent = draggedItem.quantity;
         modalAssignQty.value = 1;
         modalAssignQty.max = draggedItem.quantity;
+        modalAssignQty.min = 1;
 
-        // Show modal
         quantityModal.style.display = 'flex';
-        modalAssignQty.focus();
+        requestAnimationFrame(function () { modalAssignQty.focus(); });
     }
 
-    /**
-     * Close quantity modal
-     */
     function closeQuantityModal() {
-        quantityModal.style.display = 'none';
+        if (quantityModal) quantityModal.style.display = 'none';
         draggedItem = null;
         targetRoom = null;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Assignment Function
-    |--------------------------------------------------------------------------
-    */
+    /* ==============================================================
+     * ASSIGNMENT  (plain XHR POST)
+     * ============================================================== */
 
-    /**
-     * Assign item to room
-     */
     function assignItemToRoom() {
         if (!draggedItem || !targetRoom) {
-            showAlert('error', 'Invalid item or room selection');
+            showAlert('error', 'Invalid item or room selection.');
             return;
         }
 
-        const quantity = parseInt(modalAssignQty.value);
+        var quantity = parseInt(modalAssignQty.value, 10);
 
-        // Validate quantity
-        if (!quantity || quantity < 1) {
-            showAlert('error', 'Please enter a valid quantity');
+        // --- client-side validation ---
+        if (!quantity || quantity < 1 || isNaN(quantity)) {
+            showAlert('error', 'Please enter a valid quantity (≥ 1).');
             return;
         }
-
         if (quantity > draggedItem.quantity) {
-            showAlert('error', `Only ${draggedItem.quantity} available`);
+            showAlert('error', 'Only ' + draggedItem.quantity + ' available.');
             return;
         }
 
-        // Disable submit button
+        // --- disable button while in-flight ---
         modalSubmit.disabled = true;
-        modalSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assigning...';
+        modalSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assigning…';
 
-        // Prepare form data
-        const formData = new FormData();
-        formData.append('item_id', draggedItem.id);
-        formData.append('room_id', targetRoom.id);
-        formData.append('quantity', quantity);
+        // --- build form body manually (no FormData needed) ---
+        var body = 'item_id=' + encodeURIComponent(draggedItem.id)
+            + '&room_id=' + encodeURIComponent(targetRoom.id)
+            + '&quantity=' + encodeURIComponent(quantity);
 
-        // Send request
-        fetch('../config/assignItem.php', {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => response.text())
-            .then(data => {
-                if (data.includes('Success')) {
-                    showAlert('success', data);
-                    closeQuantityModal();
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '../config/assignItem.php', true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
-                    // Reload page after 1.5 seconds
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    showAlert('error', data);
-                    // Re-enable button
-                    modalSubmit.disabled = false;
-                    modalSubmit.innerHTML = '<i class="fas fa-check"></i> Assign Item';
+        xhr.onload = function () {
+            if (xhr.status === 401) {
+                window.location.href = '../config/login.php';
+                return;
+            }
+
+            var msg = xhr.responseText.trim();
+
+            // assignItem.php echoes a plain-text message.
+            // Success messages contain the word "Success".
+            if (msg.indexOf('Success') !== -1) {
+                showAlert('success', msg);
+                closeQuantityModal();
+
+                // Wipe the search cache so the next search fetches fresh
+                // quantities from the server
+                if (typeof window.searchFunctions === 'object' &&
+                    typeof window.searchFunctions.invalidateCache === 'function') {
+                    window.searchFunctions.invalidateCache();
                 }
-            })
-            .catch(error => {
-                console.error('Assignment error:', error);
-                showAlert('error', 'Failed to assign item. Please try again.');
-                // Re-enable button
-                modalSubmit.disabled = false;
-                modalSubmit.innerHTML = '<i class="fas fa-check"></i> Assign Item';
-            });
+
+                // Let the user read the toast, then reload
+                setTimeout(function () { window.location.reload(); }, 1500);
+            } else {
+                showAlert('error', msg || 'Assignment failed.');
+                resetSubmitButton();
+            }
+        };
+
+        xhr.onerror = function () {
+            showAlert('error', 'Failed to assign item. Please try again.');
+            resetSubmitButton();
+        };
+
+        xhr.send(body);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Event Listeners
-    |--------------------------------------------------------------------------
-    */
-
-    // Close modal button
-    if (modalClose) {
-        modalClose.addEventListener('click', closeQuantityModal);
-    }
-
-    // Submit button
-    if (modalSubmit) {
-        modalSubmit.addEventListener('click', assignItemToRoom);
-    }
-
-    // Close modal on outside click
-    window.addEventListener('click', function (event) {
-        if (event.target === quantityModal) {
-            closeQuantityModal();
+    function resetSubmitButton() {
+        if (modalSubmit) {
+            modalSubmit.disabled = false;
+            modalSubmit.innerHTML = '<i class="fas fa-check"></i> Assign Item';
         }
+    }
+
+    /* ==============================================================
+     * ALERT  (top-of-page toast)
+     * ============================================================== */
+
+    function showAlert(type, message) {
+        // Remove any previous toasts
+        var existing = document.querySelectorAll('.alert');
+        for (var i = 0; i < existing.length; i++) existing[i].remove();
+
+        var alert = document.createElement('div');
+        alert.className = 'alert ' + type;
+        alert.innerHTML =
+            '<span>' + escapeHtml(message) + '</span>'
+            + '<button class="alert-close" onclick="this.parentElement.remove()">'
+            + '<i class="fas fa-times"></i></button>';
+
+        var container = document.querySelector('.main-content') || document.body;
+        container.insertBefore(alert, container.firstChild);
+
+        // Auto-dismiss with a short fade
+        setTimeout(function () {
+            alert.style.transition = 'opacity 0.3s';
+            alert.style.opacity = '0';
+            setTimeout(function () { alert.remove(); }, 350);
+        }, 5000);
+    }
+
+    /* ==============================================================
+     * HELPERS
+     * ============================================================== */
+
+    function escapeHtml(text) {
+        if (!text && text !== 0) return '';
+        var el = document.createElement('div');
+        el.textContent = String(text);
+        return el.innerHTML;
+    }
+
+    /* ==============================================================
+     * EVENT WIRING
+     * ============================================================== */
+
+    if (modalClose) modalClose.addEventListener('click', closeQuantityModal);
+    if (modalSubmit) modalSubmit.addEventListener('click', assignItemToRoom);
+
+    // Click on the backdrop → close
+    window.addEventListener('click', function (e) {
+        if (e.target === quantityModal) closeQuantityModal();
     });
 
-    // Submit on Enter key in quantity input
+    // Enter in quantity input → submit
     if (modalAssignQty) {
-        modalAssignQty.addEventListener('keypress', function (e) {
+        modalAssignQty.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 assignItemToRoom();
@@ -229,63 +276,23 @@
         });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Helper Functions
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * Show alert message
-     */
-    function showAlert(type, message) {
-        // Remove existing alerts
-        const existingAlerts = document.querySelectorAll('.alert');
-        existingAlerts.forEach(alert => alert.remove());
-
-        // Create new alert
-        const alert = document.createElement('div');
-        alert.className = `alert ${type}`;
-        alert.innerHTML = `
-            <span>${escapeHtml(message)}</span>
-            <button class="alert-close" onclick="this.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-
-        // Insert alert
-        const mainContent = document.querySelector('.main-content') || document.body;
-        mainContent.insertBefore(alert, mainContent.firstChild);
-
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            alert.style.opacity = '0';
-            setTimeout(() => alert.remove(), 300);
-        }, 5000);
-    }
-
-    /**
-     * Escape HTML
-     */
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Initialize
-    |--------------------------------------------------------------------------
-    */
-
-    // Attach listeners on page load
-    document.addEventListener('DOMContentLoaded', function () {
+    /* ----------------------------------------------------------
+     * Init
+     * ---------------------------------------------------------- */
+    function init() {
         attachDragListeners();
         attachDropListeners();
-    });
+    }
 
-    // Make function available globally for search results
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    /* ----------------------------------------------------------
+     * Public API
+     * ---------------------------------------------------------- */
     window.attachDragListeners = attachDragListeners;
 
 })();

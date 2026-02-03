@@ -6,27 +6,30 @@ requireLogin();
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['user'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+$rn = trim($_POST['rn'] ?? '');
+$name = trim($_POST['name'] ?? '');
+$floorId = sanitizeId($_POST['floor_number'] ?? null);   // the <select> value is the floor id (int)
+
+if ($rn === '' || $name === '' || !$floorId) {
+    echo json_encode(['success' => false, 'message' => 'All fields are required.']);
     exit;
 }
 
-$rn = trim($_POST['rn'] ?? '');
-$name = trim($_POST['name'] ?? '');
-$roomFloor = trim($_POST['floor_number'] ?? '');
-
-if ($rn === '' || $name === '' || $roomFloor === '') {
-    echo json_encode(['success' => false, 'message' => 'All fields required']);
+// Make sure the floor actually exists
+$floor = fetchOne($conn, "SELECT id FROM floors WHERE id = ?", [$floorId], 'i');
+if (!$floor) {
+    echo json_encode(['success' => false, 'message' => 'Selected floor does not exist.']);
     exit;
 }
 
 $stmt = $conn->prepare("INSERT INTO rooms (rn, name, floor_id) VALUES (?, ?, ?)");
-$stmt->bind_param("ss", $rn, $name, $roomFloor);
+$stmt->bind_param("ssi", $rn, $name, $floorId);   // two strings + one int
 
 if ($stmt->execute()) {
-    echo json_encode(['success' => true]);
+    echo json_encode(['success' => true, 'message' => 'Room added successfully.']);
 } else {
-    echo json_encode(['success' => false, 'message' => 'Room already exists']);
+    echo json_encode(['success' => false, 'message' => 'Room already exists or could not be created.']);
 }
 
 $stmt->close();
+$conn->close();

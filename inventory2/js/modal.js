@@ -1,250 +1,215 @@
 /**
- * Modal Functionality for Add/Edit Items
+ * Modal Functionality – Add / Edit / Delete Items
  * SHJCS Inventory System
+ *
+ * openEditModal  – reads item data from window.__ITEMS__ (no network call).
+ * editItem POST  – plain XHR POST to editItem.php, reads JSON response.
+ * deleteItem     – plain XHR POST to delete.php, reads JSON response.
  */
 
 (function () {
     'use strict';
 
-    // Add Item Modal Elements
-    const addItemBtn = document.getElementById('addItem');
-    const itemModal = document.getElementById('itemModal');
-    const itemModalClose = document.getElementById('itemModalClose');
-    const addItemForm = document.getElementById('addItemForm');
-    const addItemSubmit = document.getElementById('addItemSubmit');
+    /* ----------------------------------------------------------
+     * ADD ITEM modal
+     * ---------------------------------------------------------- */
+    var addItemBtn = document.getElementById('addItem');
+    var itemModal = document.getElementById('itemModal');
+    var itemModalClose = document.getElementById('itemModalClose');
+    var addItemForm = document.getElementById('addItemForm');
+    var addItemSubmit = document.getElementById('addItemSubmit');
 
-    // Edit Item Modal Elements
-    const editItemModal = document.getElementById('editItemModal');
-    const editItemModalClose = document.getElementById('editItemModalClose');
-    const editItemForm = document.getElementById('editItemForm');
-    const editItemSubmit = document.getElementById('editItemSubmit');
-
-    /*
-    |--------------------------------------------------------------------------
-    | ADD ITEM MODAL
-    |--------------------------------------------------------------------------
-    */
-
-    // Open Add Item Modal
-    if (addItemBtn) {
+    if (addItemBtn && itemModal) {
         addItemBtn.addEventListener('click', function () {
             itemModal.style.display = 'flex';
-            // Reset form
-            if (addItemForm) {
-                addItemForm.reset();
-            }
+            if (addItemForm) addItemForm.reset();
         });
     }
 
-    // Close Add Item Modal
-    if (itemModalClose) {
+    if (itemModalClose && itemModal) {
         itemModalClose.addEventListener('click', function () {
             itemModal.style.display = 'none';
         });
     }
 
-    // Submit Add Item Form
+    // Add-Item form submits as a normal POST (the <form action> does the work).
+    // Button just validates and disables itself to prevent double-click.
     if (addItemSubmit && addItemForm) {
         addItemSubmit.addEventListener('click', function (e) {
             e.preventDefault();
-
-            // Validate form
             if (!addItemForm.checkValidity()) {
                 addItemForm.reportValidity();
                 return;
             }
-
-            // Disable button to prevent double submission
             addItemSubmit.disabled = true;
-            addItemSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-
-            // Submit form
+            addItemSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding…';
             addItemForm.submit();
         });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | EDIT ITEM MODAL
-    |--------------------------------------------------------------------------
-    */
+    /* ----------------------------------------------------------
+     * EDIT ITEM modal
+     * ---------------------------------------------------------- */
+    var editItemModal = document.getElementById('editItemModal');
+    var editItemModalClose = document.getElementById('editItemModalClose');
+    var editItemForm = document.getElementById('editItemForm');
+    var editItemSubmit = document.getElementById('editItemSubmit');
 
-    // Close Edit Item Modal
-    if (editItemModalClose) {
+    if (editItemModalClose && editItemModal) {
         editItemModalClose.addEventListener('click', function () {
             editItemModal.style.display = 'none';
         });
     }
 
-    // Submit Edit Item Form
+    // Edit-Item submit – plain XHR POST, editItem.php returns JSON
     if (editItemSubmit && editItemForm) {
         editItemSubmit.addEventListener('click', function (e) {
             e.preventDefault();
-
-            // Validate form
             if (!editItemForm.checkValidity()) {
                 editItemForm.reportValidity();
                 return;
             }
 
-            // Disable button
             editItemSubmit.disabled = true;
-            editItemSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            editItemSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
 
-            // Get form data
-            const formData = new FormData(editItemForm);
+            var body = 'item_id=' + encodeURIComponent(document.getElementById('editItemId').value)
+                + '&itemName=' + encodeURIComponent(document.getElementById('editItemName').value)
+                + '&quantity=' + encodeURIComponent(document.getElementById('editQuantity').value)
+                + '&condition=' + encodeURIComponent(document.getElementById('editCondition').value)
+                + '&type=' + encodeURIComponent(document.getElementById('editType').value)
+                + '&description=' + encodeURIComponent(document.getElementById('editDescription').value);
 
-            // Submit via AJAX
-            fetch('../config/editItem.php', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        showAlert('success', data.message);
-                        editItemModal.style.display = 'none';
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '../config/editItem.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
-                        // Refresh the page after 1 second
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    } else {
-                        showAlert('error', data.message);
-                        // Re-enable button
-                        editItemSubmit.disabled = false;
-                        editItemSubmit.innerHTML = '<i class="fas fa-check"></i> Save Changes';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showAlert('error', 'Failed to update item. Please try again.');
-                    // Re-enable button
+            xhr.onload = function () {
+                var data;
+                try { data = JSON.parse(xhr.responseText); } catch (ex) { data = null; }
+
+                if (data && data.status === 'success') {
+                    showAlert('success', data.message);
+                    editItemModal.style.display = 'none';
+                    setTimeout(function () { window.location.reload(); }, 1000);
+                } else {
+                    showAlert('error', (data && data.message) || 'Failed to update item.');
                     editItemSubmit.disabled = false;
                     editItemSubmit.innerHTML = '<i class="fas fa-check"></i> Save Changes';
-                });
+                }
+            };
+
+            xhr.onerror = function () {
+                showAlert('error', 'Network error. Please try again.');
+                editItemSubmit.disabled = false;
+                editItemSubmit.innerHTML = '<i class="fas fa-check"></i> Save Changes';
+            };
+
+            xhr.send(body);
         });
     }
 
-    // Close modals when clicking outside
-    window.addEventListener('click', function (event) {
-        if (event.target === itemModal) {
-            itemModal.style.display = 'none';
-        }
-        if (event.target === editItemModal) {
-            editItemModal.style.display = 'none';
-        }
+    /* ----------------------------------------------------------
+     * Close modals on backdrop click
+     * ---------------------------------------------------------- */
+    window.addEventListener('click', function (e) {
+        if (itemModal && e.target === itemModal) itemModal.style.display = 'none';
+        if (editItemModal && e.target === editItemModal) editItemModal.style.display = 'none';
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | GLOBAL FUNCTIONS
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * Open Edit Modal (called from item cards)
-     */
+    /* ----------------------------------------------------------
+     * GLOBAL: openEditModal(itemId)
+     * Reads data from window.__ITEMS__ – no network call.
+     * ---------------------------------------------------------- */
     window.openEditModal = function (itemId) {
-        // Fetch item details
-        fetch(`../config/getItem.php?id=${itemId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success' && data.item) {
-                    const item = data.item;
+        var items = window.__ITEMS__ || [];
+        var item = null;
 
-                    // Populate form fields
-                    document.getElementById('editItemId').value = item.id;
-                    document.getElementById('editItemName').value = item.name;
-                    document.getElementById('editQuantity').value = item.quantity;
-                    document.getElementById('editCondition').value = item.conditions;
-                    document.getElementById('editType').value = item.type;
-                    document.getElementById('editDescription').value = item.description || '';
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].id === itemId) {
+                item = items[i];
+                break;
+            }
+        }
 
-                    // Show modal
-                    editItemModal.style.display = 'flex';
-                } else {
-                    showAlert('error', 'Failed to load item details.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showAlert('error', 'Failed to load item details.');
-            });
-    };
-
-    /**
-     * Delete Item (called from item cards)
-     */
-    window.deleteItem = function (itemId, itemName) {
-        if (!confirm(`Are you sure you want to delete "${itemName}"?`)) {
+        if (!item) {
+            showAlert('error', 'Item not found. Please refresh and try again.');
             return;
         }
 
-        // Create form data
-        const formData = new FormData();
-        formData.append('item_id', itemId);
+        document.getElementById('editItemId').value = item.id;
+        document.getElementById('editItemName').value = item.name;
+        document.getElementById('editQuantity').value = item.quantity;
+        document.getElementById('editCondition').value = item.condition;   // 'condition' key in __ITEMS__
+        document.getElementById('editType').value = item.type;
+        document.getElementById('editDescription').value = item.description || '';
 
-        // Submit delete request
-        fetch('../config/delete.php', {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showAlert('success', data.message);
-
-                    // Refresh the page after 1 second
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    showAlert('error', data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showAlert('error', 'Failed to delete item. Please try again.');
-            });
+        if (editItemModal) editItemModal.style.display = 'flex';
     };
 
-    /**
-     * Show alert message
-     */
+    /* ----------------------------------------------------------
+     * GLOBAL: deleteItem(itemId, itemName)
+     * Plain XHR POST; delete.php returns JSON.
+     * ---------------------------------------------------------- */
+    window.deleteItem = function (itemId, itemName) {
+        if (!confirm('Are you sure you want to delete "' + itemName + '"?')) return;
+
+        var body = 'item_id=' + encodeURIComponent(itemId);
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '../config/delete.php', true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+        xhr.onload = function () {
+            var data;
+            try { data = JSON.parse(xhr.responseText); } catch (ex) { data = null; }
+
+            if (data && data.status === 'success') {
+                showAlert('success', data.message);
+                setTimeout(function () { window.location.reload(); }, 1000);
+            } else {
+                showAlert('error', (data && data.message) || 'Failed to delete item.');
+            }
+        };
+
+        xhr.onerror = function () {
+            showAlert('error', 'Network error. Please try again.');
+        };
+
+        xhr.send(body);
+    };
+
+    /* ----------------------------------------------------------
+     * Alert helper (top-of-page toast, shared by all modals)
+     * ---------------------------------------------------------- */
     function showAlert(type, message) {
-        // Remove existing alerts
-        const existingAlerts = document.querySelectorAll('.alert');
-        existingAlerts.forEach(alert => alert.remove());
+        var old = document.querySelectorAll('.alert');
+        for (var i = 0; i < old.length; i++) old[i].remove();
 
-        // Create new alert
-        const alert = document.createElement('div');
-        alert.className = `alert ${type}`;
-        alert.innerHTML = `
-            <span>${escapeHtml(message)}</span>
-            <button class="alert-close" onclick="this.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
+        var alert = document.createElement('div');
+        alert.className = 'alert ' + type;
+        alert.innerHTML =
+            '<span>' + escapeHtml(message) + '</span>'
+            + '<button class="alert-close" onclick="this.parentElement.remove()">'
+            + '<i class="fas fa-times"></i></button>';
 
-        // Insert alert at the top of main content
-        const mainContent = document.querySelector('.main-content') || document.body;
-        mainContent.insertBefore(alert, mainContent.firstChild);
+        var container = document.querySelector('.main-content') || document.body;
+        container.insertBefore(alert, container.firstChild);
 
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
+        setTimeout(function () {
+            alert.style.transition = 'opacity 0.3s';
             alert.style.opacity = '0';
-            setTimeout(() => alert.remove(), 300);
+            setTimeout(function () { alert.remove(); }, 350);
         }, 5000);
     }
 
-    /**
-     * Escape HTML
-     */
     function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        if (!text && text !== 0) return '';
+        var el = document.createElement('div');
+        el.textContent = String(text);
+        return el.innerHTML;
     }
 
 })();

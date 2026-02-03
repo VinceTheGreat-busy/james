@@ -29,7 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = "Password must be at least 6 characters.";
         } else {
             $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ? LIMIT 1");
-
             if ($stmt) {
                 $stmt->bind_param("ss", $username, $email);
                 $stmt->execute();
